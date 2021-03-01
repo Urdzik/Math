@@ -1,18 +1,16 @@
 import cern.jet.random.Normal
 import cern.jet.random.Poisson
-import org.apache.commons.math3.distribution.BinomialDistribution
-import org.apache.commons.math3.distribution.GeometricDistribution
-import org.apache.commons.math3.distribution.PoissonDistribution
-import org.apache.commons.math3.random.RandomGenerator
+import org.apache.commons.math3.analysis.differentiation.DerivativeStructure
 import org.apache.commons.math3.special.Erf
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation
+import org.apache.commons.math3.stat.descriptive.moment.Variance
+import org.mariuszgromada.math.mxparser.Expression
 import umontreal.ssj.probdist.BinomialDist
 import umontreal.ssj.probdist.GeometricDist
-import umontreal.ssj.probdist.PoissonDist
 import umontreal.ssj.util.Num
 import kotlin.math.pow
 import java.text.DecimalFormat
 import kotlin.random.Random
-import kotlin.random.Random.Default.nextInt
 
 object Taculator {
 
@@ -869,7 +867,7 @@ object Taculator {
     }
 
     fun invT(a: Number, b: Number, c: Number): Number {
-        val binomial = BinomialDist.inverseF(a.toInt(), b.toDouble(),c.toDouble())
+        val binomial = BinomialDist.inverseF(a.toInt(), b.toDouble(), c.toDouble())
         return binomial
     }
 
@@ -884,23 +882,173 @@ object Taculator {
     }
 
     fun geometpdf(a: Number, b: Number): Number {
-        val poisson = GeometricDist( a.toDouble())
+        val poisson = GeometricDist(a.toDouble())
         return poisson.barF(b.toInt())
     }
 
     // FIXME not right result
     fun geometcdf(p: Number, n: Number): Number {
-        val result = (1- (1-p.toDouble())).pow(n.toDouble())
+        val result = 1 - (1 - p.toDouble()).pow(n.toDouble())
         return result
     }
 
-    fun SortA(array: Array<Number>): Array<Number>{
-        return array.apply { sort()}
+    fun SortA(array: Array<Number>): Array<Number> {
+        return array.apply { sort() }
     }
 
-    fun SortD(array: Array<Number>): Array<Number>{
-        return array.apply { sort()}.reversedArray()
+    fun SortD(array: Array<Number>): Array<Number> {
+        return array.apply { sort() }.reversedArray()
     }
+
+    fun mean(array: Array<Number>): Number {
+        var result = 0.0
+        if (array.isNotEmpty()) {
+            for (mark in array) {
+                result += mark.toDouble()
+            }
+            return result / array.size
+        }
+        return result
+    }
+
+    fun mean(array1: Array<Number>, array2: Array<Number>): Number {
+        val resultList = mutableListOf<Number>()
+        array1.forEachIndexed { index, number ->
+            for (item in 0 until array2[index].toInt()) {
+                resultList.add(number)
+            }
+        }
+
+
+        val result = mean(resultList.toTypedArray())
+        return result
+    }
+
+    fun median(array: Array<Number>): Number {
+        return if (array.size % 2 == 0) {
+            (array[array.size / 2].toDouble() + array[array.size / 2 - 1].toDouble()) / 2
+        } else {
+            array[array.size / 2]
+        }
+    }
+
+    fun median(array1: Array<Number>, array2: Array<Number>): Number {
+        val resultList = mutableListOf<Number>()
+        array1.forEachIndexed { index, number ->
+            for (item in 0 until array2[index].toInt()) {
+                resultList.add(number)
+            }
+        }
+
+        val result = median(resultList.toTypedArray())
+        return result
+    }
+
+    fun sum(array: Array<Number>): Number {
+        var result = 0.0
+        array.forEach {
+            result += it.toDouble()
+        }
+        return result
+    }
+
+    fun sum(array: Array<Number>, lower: Int, upper: Int): Number {
+        var result = 0.0
+        array.forEachIndexed { index: Int, number: Number ->
+            if (index in lower..upper) {
+                result += number.toDouble()
+            }
+        }
+        return result
+    }
+
+    fun prod(array: Array<Number>): Number {
+        var result = 1.0
+        array.forEach {
+            result *= it.toDouble()
+        }
+        return result
+    }
+
+    fun prod(array: Array<Number>, lower: Int, upper: Int): Number {
+        var result = 1.0
+        array.forEachIndexed { index: Int, number: Number ->
+            if (index in lower..upper) {
+                result *= number.toDouble()
+            }
+        }
+        return result
+    }
+
+    fun stdDev(array: Array<Number>): Number {
+        val arr = array.map { it.toDouble() }.toDoubleArray()
+        val result = StandardDeviation().evaluate(arr)
+        return result
+    }
+
+    fun stdDev(array1: Array<Number>, array2: Array<Number>): Number {
+        val resultList = mutableListOf<Number>()
+        array1.forEachIndexed { index, number ->
+            for (item in 0 until array2[index].toInt()) {
+                resultList.add(number)
+            }
+        }
+
+
+        val result = stdDev(resultList.toTypedArray())
+        return result
+    }
+
+    fun variance(array: Array<Number>): Number {
+        val arr = array.map { it.toDouble()}.toDoubleArray()
+        val result = Variance().evaluate(arr)
+        return result
+    }
+
+    fun variance(array1: Array<Number>, array2: Array<Number>): Number {
+        val resultList = mutableListOf<Number>()
+        array1.forEachIndexed { index, number ->
+            for (item in 0 until array2[index].toInt()) {
+                resultList.add(number)
+            }
+        }
+        val result = variance(resultList.toTypedArray())
+        return result
+    }
+
+
+    fun nDeriv(func: String, x: Number): Number {
+        val result =  Expression("der($func, x, $x)")
+        return Math.ceil(result.calculate())
+    }
+
+    fun fInt(func: String, from: Number, to: Number): Number {
+        val result =  Expression("int($func, x, $from, $to)")
+        return Math.ceil(result.calculate())
+    }
+
+    fun summation(func: String, min: Number, max: Number): Number {
+        val result = Expression("sum(x, $min, $max, $func)")
+        return Math.ceil(result.calculate())
+    }
+
+    fun logBASE(a: Number, b: Number): Number {
+        val a_data: Double = a.toDouble()
+        val b_data: Double = b.toDouble()
+        val result = Math.ceil( a_data.pow(1/b_data))
+        return result
+    }
+
+    fun fMin(func: String, min: Number, max: Number): Number{
+        val result = Expression("mini(x, $min, $max, $func)")
+        return result.calculate()
+    }
+
+    fun fMax(func: String, min: Number, max: Number): Number{
+        val result = Expression("maxi(x, $min, $max, $func)")
+        return result.calculate()
+    }
+
 
 
 
