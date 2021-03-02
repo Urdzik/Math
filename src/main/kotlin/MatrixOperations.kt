@@ -231,6 +231,57 @@ object MatrixOperations {
         return matrix
     }
 
+
+    fun ref(matrix: Array<DoubleArray>): Array<DoubleArray> {
+        var matrix = matrix
+        var lead = 0
+        var i: Int
+
+        val list = mutableListOf<DoubleArray>()
+
+        // number of rows and columns in matrix
+        val numRows = matrix.size
+        val numColumns: Int = matrix[0].size
+        for (k in 0 until numRows) {
+            if (numColumns <= lead) {
+                break
+            }
+            i = k
+            while (matrix[i][lead] == 0.0) {
+                i++
+                if (numRows == i) {
+                    i = k
+                    lead++
+                    if (numColumns == lead) {
+                        break
+                    }
+                }
+            }
+
+            matrix = rowSwap(matrix, i, k)
+
+            if (matrix[k][lead] != 0.0) {
+                matrix = rowScale(matrix, k, 1 / matrix[k][lead])
+            }
+            i = 0
+            while (i < numRows) {
+                if (i != k) {
+                    matrix = rowAddScale(matrix, k, i, -1 * matrix[i][lead])
+                }
+                i++
+            }
+            printMatrix(matrix, 1)
+            val listOfNumber = mutableListOf<Double>()
+            matrix[k].forEach {
+                listOfNumber.add(it)
+
+            }
+            list.add(listOfNumber.toDoubleArray())
+            lead++
+        }
+        return list.toTypedArray()
+    }
+
     /**
      * Swap positions of 2 rows
      *

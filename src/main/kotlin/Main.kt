@@ -14,23 +14,28 @@ import java.util.function.DoubleFunction
 //}
 
 
-    // approximate the limit
-    private const val DX = 0.0001
+// approximate the limit
+private const val DX = 0.0001
 
-    /**
+/**
 
-     */
-    private fun derive(f: DoubleFunction<Double>): DoubleFunction<Double> {
-        return DoubleFunction { x: Double ->
-            (f.apply(x + DX) - f.apply(
-                x
-            )) / DX
-        }
+ */
+private fun derive(f: DoubleFunction<Double>): DoubleFunction<Double> {
+    return DoubleFunction { x: Double ->
+        (f.apply(x + DX) - f.apply(
+            x
+        )) / DX
     }
+}
 
-    fun main(args: Array<String>) {
-      val result = Taculator.fMin("x^3-2*x-2", -5, 5)
-        println(result)
+fun main(args: Array<String>) {
+    val one = "15º"
+    val two = "15º1'"
+    val three = "15.60°58.7'59\""
+    val result = Taculator.dns(
+        three
+    )
+    println(result)
 
 
 //        val x = DerivativeStructure(1, 3, 0, 1.0)
@@ -56,4 +61,4 @@ import java.util.function.DoubleFunction
 //        println("y''  = " + y.getPartialDerivative(2))
 //        println("y''' = " + y.getPartialDerivative(3))
 
-    }
+}

@@ -1,9 +1,13 @@
+import TaculatorExtension.have
+import cern.jet.random.Binomial
 import cern.jet.random.Normal
 import cern.jet.random.Poisson
+import cern.jet.random.engine.RandomEngine
 import org.apache.commons.math3.analysis.differentiation.DerivativeStructure
 import org.apache.commons.math3.special.Erf
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation
 import org.apache.commons.math3.stat.descriptive.moment.Variance
+import org.mariuszgromada.math.mxparser.Argument
 import org.mariuszgromada.math.mxparser.Expression
 import umontreal.ssj.probdist.BinomialDist
 import umontreal.ssj.probdist.GeometricDist
@@ -630,24 +634,23 @@ object Taculator {
         return list.joinToString { it.toString() }
     }
 
-    // TODO Add those func
-    fun randNorm(a: Int, b: Int): Number {
+    fun randNorm(a: Number, b: Number): Number {
         val a_data: Double = a.toDouble()
         val b_data: Double = b.toDouble()
-
-        var result = 0.0
-
-        result = java.util.Random().nextGaussian()
-
-
+        val result = Normal.staticNextDouble(a_data, b_data)
         return result
     }
 
-    fun randBin(a: Int, b: Int): Number {
-        val a_data: Double = a.toDouble()
-        val b_data: Double = b.toDouble()
-
-        return 0.0
+    // TODO I think this function work right, but i not sure
+    fun randBin(a: Number, b: Number, count: Int = 1): String {
+        val n: Int = a.toInt()
+        val p: Double = b.toDouble()
+        val listOfBinomial = mutableListOf<Number>()
+        val binom = Binomial(n, p, RandomEngine.makeDefault())
+        for (i in 0 until count) {
+            listOfBinomial.add(binom.nextDouble())
+        }
+        return listOfBinomial.joinToString { it.toString() }
     }
 
 
@@ -764,13 +767,26 @@ object Taculator {
         return result.joinToString { it.joinToString { it.toString() } }
     }
 
-    // TODO add dim with sto→
     fun dim(matrix: Array<DoubleArray>): Int {
         var result = 0
         matrix.forEach {
             result += it.size
         }
         return result
+    }
+
+    fun stoDim(size: Int): Array<DoubleArray> {
+        return arrayOf(DoubleArray(size))
+    }
+
+    fun fill(number: Number, matrix: Array<DoubleArray>): Array<DoubleArray> {
+        val matrix = matrix
+        matrix.forEachIndexed { index, doubles ->
+            for ((i, data) in doubles.withIndex()) {
+                doubles[i] = number.toDouble()
+            }
+        }
+        return matrix
     }
 
     // FIXME: 2/25/21 I don't know, how to do it
@@ -838,6 +854,12 @@ object Taculator {
         return result
     }
 
+    fun ref(matrix: Array<DoubleArray>): Array<DoubleArray>? {
+        val result = MatrixOperations.ref(matrix)
+        MatrixOperations.printMatrix(result, 5)
+        return result
+    }
+
     fun normalpdf(a: Number, b: Number, c: Number): Number {
         val normal = Normal(b.toDouble(), c.toDouble(), null)
         val result = normal.pdf(a.toDouble())
@@ -881,12 +903,17 @@ object Taculator {
         return poisson.cdf(b.toInt())
     }
 
+    fun binompdf(a: Number, b: Number, c: Number): Number {
+        val binom = Binomial(a.toInt(), b.toDouble(), null)
+        val result = binom.pdf(c.toInt())
+        return result
+    }
+
     fun geometpdf(a: Number, b: Number): Number {
         val poisson = GeometricDist(a.toDouble())
         return poisson.barF(b.toInt())
     }
 
-    // FIXME not right result
     fun geometcdf(p: Number, n: Number): Number {
         val result = 1 - (1 - p.toDouble()).pow(n.toDouble())
         return result
@@ -1000,7 +1027,7 @@ object Taculator {
     }
 
     fun variance(array: Array<Number>): Number {
-        val arr = array.map { it.toDouble()}.toDoubleArray()
+        val arr = array.map { it.toDouble() }.toDoubleArray()
         val result = Variance().evaluate(arr)
         return result
     }
@@ -1018,12 +1045,12 @@ object Taculator {
 
 
     fun nDeriv(func: String, x: Number): Number {
-        val result =  Expression("der($func, x, $x)")
+        val result = Expression("der($func, x, $x)")
         return Math.ceil(result.calculate())
     }
 
     fun fInt(func: String, from: Number, to: Number): Number {
-        val result =  Expression("int($func, x, $from, $to)")
+        val result = Expression("int($func, x, $from, $to)")
         return Math.ceil(result.calculate())
     }
 
@@ -1035,21 +1062,193 @@ object Taculator {
     fun logBASE(a: Number, b: Number): Number {
         val a_data: Double = a.toDouble()
         val b_data: Double = b.toDouble()
-        val result = Math.ceil( a_data.pow(1/b_data))
+        val result = Math.ceil(a_data.pow(1 / b_data))
         return result
     }
 
-    fun fMin(func: String, min: Number, max: Number): Number{
-        val result = Expression("mini(x, $min, $max, $func)")
-        return result.calculate()
+
+//    FIXME: 3/2/21 i don't know, what doing these function
+//    fun fMin(func: String, min: Number, max: Number): Number{
+//        val result = Expression("mini(x, $min, $max, $func)")
+//        return result.calculate()
+//    }
+//
+//    fun fMax(func: String, min: Number, max: Number): Number {
+//        val result = Expression("maxi(x, $min, $max, $func)")
+//        return result.calculate()
+//    }
+
+    fun fd(a: Number): String {
+        val a_data: Double = a.toDouble()
+        if (a_data < 0) {
+            return "-" + frac(-a_data)
+        }
+        val tolerance = 1.0E-6
+        var h1 = 1.0
+        var h2 = 0.0
+        var k1 = 0.0
+        var k2 = 1.0
+        var b = a_data
+        do {
+            val x = Math.floor(b)
+            var aux = h1
+            h1 = x * h1 + h2
+            h2 = aux
+            aux = k1
+            k1 = x * k1 + k2
+            k2 = aux
+            b = 1 / (b - x)
+        } while (Math.abs(a_data - h1 / k1) > a_data * tolerance)
+        return "${h1.toInt()}/${k1.toInt()}"
     }
 
-    fun fMax(func: String, min: Number, max: Number): Number{
-        val result = Expression("maxi(x, $min, $max, $func)")
-        return result.calculate()
+    fun ndToUnd(s: String): String {
+        val listOfNumber = s.split('/')
+        val a_data = listOfNumber[0].toDouble()
+        val b_data = listOfNumber[1].toDouble()
+        val u: Int
+        val n: Int
+        val d: Int = b_data.toInt()
+        u = (a_data / b_data).toInt()
+        n = (a_data - (u * b_data)).toInt()
+        return "$u $n/$d"
     }
 
+    fun ndToUnd(u: Number, s: String): String {
+        val listOfNumber = s.split('/')
+        val a_data = listOfNumber[0].toInt()
+        val b_data = listOfNumber[1].toInt()
+        val u_data: Int
+        var n: Int = a_data.toInt()
+        val d: Int = b_data.toInt()
+        u_data = (a_data / b_data).toInt() + u.toInt()
+        n += (u_data * b_data).toInt()
+        return "$n/$d"
+    }
 
+    //TODO i don't understand, what doing these functions
+    fun rect() {
+
+    }
+
+    fun polar() {
+
+    }
+
+    fun radian(func: String): Number {
+        val result = Expression("deg($func)").calculate()
+        return result
+    }
+
+    fun dns(data: String): String {
+
+        var result = ""
+        var minutes = 0.0
+        var seconds = 0.0
+        var milliSeconds = 0.0
+
+        val m = '°'
+        val dot = '.'
+        val s = '\''
+        val ms = '\"'
+
+        if (data.have(m)) {
+            val minAndOther = data.split(m)
+            minutes = minAndOther[0].toDouble()
+            if (data.have(s)) {
+                val secondsAndMilliSeconds = minAndOther[1].split(s)
+                seconds = secondsAndMilliSeconds[0].toDouble()
+                if (data.have(ms)) {
+                    milliSeconds = secondsAndMilliSeconds[1].removeSuffix("\"").toDouble()
+                }
+            }
+        }
+
+        if (milliSeconds >= 60) {
+            val milliSecondsInt = milliSeconds.toInt()
+            val remainder = milliSecondsInt % 60
+            milliSeconds = if (milliSeconds.toString().have(dot)) {
+                val afterDot = milliSeconds.toString().split(dot)[1]
+                "$remainder.$afterDot".toDouble()
+            } else {
+                remainder.toDouble()
+            }
+            seconds += milliSecondsInt / 60
+        }
+
+        if (seconds >= 60) {
+            val secondsInt = seconds.toInt()
+            val remainder = secondsInt % 60
+            seconds = if (seconds.toString().have(dot)) {
+                var afterDot = seconds.toString().split(dot)[1]
+               "$remainder.$afterDot".toDouble()
+            } else {
+                remainder.toDouble()
+            }
+            minutes += secondsInt / 60
+        }
+
+        if (seconds.toString().have(dot)){
+            val secondsInt = seconds.toInt()
+            val remainder = secondsInt % 60
+            var afterDot = seconds.toString().split(dot)[1]
+            if (afterDot.toDouble() <= 9){
+                afterDot = (afterDot.toDouble()*10).toString()
+            }
+          seconds =  if (afterDot.toDouble() >= 60){
+                val afterDotInt = afterDot.toDouble().toInt()
+                val afterDotRemainder = afterDotInt % 60
+                milliSeconds += afterDotInt / 60
+                "$remainder.$afterDotRemainder".toDouble()
+            }else {
+                seconds
+            }
+        }
+
+        if (milliSeconds >= 60) {
+            val milliSecondsInt = milliSeconds.toInt()
+            val remainder = milliSecondsInt % 60
+            milliSeconds = if (milliSeconds.toString().have(dot)) {
+                val afterDot = milliSeconds.toString().split(dot)[1]
+                "$remainder.$afterDot".toDouble()
+            } else {
+                remainder.toDouble()
+            }
+            seconds += milliSecondsInt / 60
+        }
+
+        if (minutes.toString().have(dot)){
+            val minutesInt = minutes.toInt()
+            val remainder = minutesInt % 60
+            var afterDot = minutes.toString().split(dot)[1]
+            if (afterDot.toDouble() <= 9){
+                afterDot = (afterDot.toDouble()*10).toString()
+            }
+            minutes =  if (afterDot.toDouble() >= 60){
+                val afterDotInt = afterDot.toDouble().toInt()
+                val afterDotRemainder = afterDotInt % 60
+                seconds += afterDotInt / 60
+                "$remainder.$afterDotRemainder".toDouble()
+            }else {
+                minutes
+            }
+        }
+
+        if (seconds >= 60) {
+            val secondsInt = seconds.toInt()
+            val remainder = secondsInt % 60
+            seconds = if (seconds.toString().have(dot)) {
+                var afterDot = seconds.toString().split(dot)[1]
+                "$remainder.$afterDot".toDouble()
+            } else {
+                remainder.toDouble()
+            }
+            minutes += secondsInt / 60
+        }
+
+        result = "$minutes°$seconds'$milliSeconds\""
+        return result
+    }
 
 
 }
