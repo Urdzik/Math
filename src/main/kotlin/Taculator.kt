@@ -4,6 +4,7 @@ import cern.jet.random.Normal
 import cern.jet.random.Poisson
 import cern.jet.random.engine.RandomEngine
 import org.apache.commons.math3.analysis.differentiation.DerivativeStructure
+import org.apache.commons.math3.geometry.euclidean.threed.SphericalCoordinates
 import org.apache.commons.math3.special.Erf
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation
 import org.apache.commons.math3.stat.descriptive.moment.Variance
@@ -14,6 +15,8 @@ import umontreal.ssj.probdist.GeometricDist
 import umontreal.ssj.util.Num
 import kotlin.math.pow
 import java.text.DecimalFormat
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.random.Random
 
 object Taculator {
@@ -278,8 +281,8 @@ object Taculator {
             simpleExample = data
         }
 
-        complex = DynamicCalculator.calculate(complexExample)
-        simple = DynamicCalculator.calculate(simpleExample)
+        complex = Expression(complexExample).calculate()
+        simple = Expression(simpleExample).calculate()
 
         complexResult = if (complex > 0) {
             "-$complex"
@@ -290,7 +293,7 @@ object Taculator {
         simpleResult = "$simple"
 
         result = if (example == "*" || example == "/") {
-            DynamicCalculator.calculate("($simpleResult)$example($complexResult)").toString() + "i"
+            Expression("($simpleResult)$example($complexResult)").calculate().toString() + "i"
         } else {
             simpleResult + complexResult + "i"
         }
@@ -339,11 +342,11 @@ object Taculator {
             simpleExample = data
         }
 
-        simple = DynamicCalculator.calculate(simpleExample)
+        simple = Expression(simpleExample).calculate()
 
         simpleResult = "$simple"
 
-        result = DynamicCalculator.calculate(simpleResult).toString()
+        result = Expression(simpleResult).calculate().toString()
 
         return result
     }
@@ -407,13 +410,13 @@ object Taculator {
         }
 
 
-        complex = DynamicCalculator.calculate(complexExample)
+        complex = Expression(complexExample).calculate()
 
         complexResult = "$complex"
 
 
 
-        result = DynamicCalculator.calculate("$complexResult").toString() + "i"
+        result = Expression(complexResult).calculate().toString() + "i"
 
 
         return result
@@ -492,8 +495,8 @@ object Taculator {
             simpleExample = data
         }
 
-        complex = DynamicCalculator.calculate(complexExample)
-        simple = DynamicCalculator.calculate(simpleExample)
+        complex = Expression(complexExample).calculate()
+        simple = Expression(simpleExample).calculate()
 
 
         result = Math.atan2(complex, simple)
@@ -507,83 +510,91 @@ object Taculator {
     }
 
     fun abs(s: String): Number {
-        val listOfAllNumber = mutableListOf<String>()
-        val listOfComplexNumber = mutableListOf<String>()
-        val listOfSimpleNumber = mutableListOf<String>()
-
-        var simple = 0.0
-        var simpleExample = ""
-        var complex = 0.0
-        var complexExample = ""
-        var numberInStr = ""
         var result = 0.0
+        if (s.have('i')){
+            val listOfAllNumber = mutableListOf<String>()
+            val listOfComplexNumber = mutableListOf<String>()
+            val listOfSimpleNumber = mutableListOf<String>()
 
-        s.forEachIndexed { index, c ->
-            if (index != s.length - 1) {
-                if (numberInStr.isNotEmpty() && (c != '-' || c != '+')) {
-                    if (c != '-' && c != '+' && c != '*' && c != '/') {
-                        numberInStr += c
+            var simple = 0.0
+            var simpleExample = ""
+            var complex = 0.0
+            var complexExample = ""
+            var numberInStr = ""
+
+
+            s.forEachIndexed { index, c ->
+                if (index != s.length - 1) {
+                    if (numberInStr.isNotEmpty() && (c != '-' || c != '+')) {
+                        if (c != '-' && c != '+' && c != '*' && c != '/') {
+                            numberInStr += c
+                        } else {
+                            if (numberInStr.isNotEmpty()) {
+                                listOfAllNumber.add(numberInStr)
+                            }
+                            if (c != '*' || c != '/') {
+                                numberInStr = c.toString()
+                            }
+                        }
                     } else {
-                        if (numberInStr.isNotEmpty()) {
-                            listOfAllNumber.add(numberInStr)
-                        }
-                        if (c != '*' || c != '/') {
-                            numberInStr = c.toString()
-                        }
+                        numberInStr += c
                     }
                 } else {
                     numberInStr += c
+                    listOfAllNumber.add(numberInStr)
+                    numberInStr = ""
                 }
-            } else {
-                numberInStr += c
-                listOfAllNumber.add(numberInStr)
-                numberInStr = ""
             }
-        }
 
-        listOfAllNumber.forEach {
-            val data = it.find { it == 'i' }
-            if (data == null) {
-                listOfSimpleNumber.add(it)
-            } else {
-                listOfComplexNumber.add(it)
-            }
-        }
-
-        listOfComplexNumber.forEach {
-            val data = it.removeSuffix("i")
-            complexExample += data
-        }
-
-        listOfSimpleNumber.forEach {
-            simpleExample += it
-        }
-
-        if (complexExample[0] == '+' || complexExample[0] == '/' || complexExample[0] == '*') {
-            val data = complexExample.removePrefix(complexExample[0].toString())
-            complexExample = data
-        } else if (complexExample[0] == '-') {
-            complexExample = ""
-            listOfComplexNumber.forEachIndexed { index, s ->
-                var data = s.removeSuffix("i")
-                if (index == 0) {
-                    data = "($data)"
+            listOfAllNumber.forEach {
+                val data = it.find { it == 'i' }
+                if (data == null) {
+                    listOfSimpleNumber.add(it)
+                } else {
+                    listOfComplexNumber.add(it)
                 }
+            }
+
+            listOfComplexNumber.forEach {
+                val data = it.removeSuffix("i")
                 complexExample += data
             }
 
+            listOfSimpleNumber.forEach {
+                simpleExample += it
+            }
+
+            if (complexExample[0] == '+' || complexExample[0] == '/' || complexExample[0] == '*') {
+                val data = complexExample.removePrefix(complexExample[0].toString())
+                complexExample = data
+            } else if (complexExample[0] == '-') {
+                complexExample = ""
+                listOfComplexNumber.forEachIndexed { index, s ->
+                    var data = s.removeSuffix("i")
+                    if (index == 0) {
+                        data = "($data)"
+                    }
+                    complexExample += data
+                }
+
+            }
+
+            if (simpleExample[0] == '+' || simpleExample[0] == '/' || simpleExample[0] == '*') {
+                val data = simpleExample.removePrefix(simpleExample[0].toString())
+                simpleExample = data
+            }
+
+            complex = Expression(complexExample).calculate()
+            simple = Expression(simpleExample).calculate()
+
+            result = sqrt(degree(simple).toDouble() + degree(complex).toDouble()).toDouble()
+        } else {
+            result = if (s.toDouble() < 0){
+                s.toDouble() * -1
+            }else {
+                s.toDouble()
+            }
         }
-
-        if (simpleExample[0] == '+' || simpleExample[0] == '/' || simpleExample[0] == '*') {
-            val data = simpleExample.removePrefix(simpleExample[0].toString())
-            simpleExample = data
-        }
-
-        complex = DynamicCalculator.calculate(complexExample)
-        simple = DynamicCalculator.calculate(simpleExample)
-
-
-        result = sqrt(degree(simple).toDouble() + degree(complex).toDouble()).toDouble()
 
         return result
     }
@@ -1127,12 +1138,26 @@ object Taculator {
     }
 
     //TODO i don't understand, what doing these functions
-    fun rect() {
-
+    fun rect(s: String): String {
+        val result  =""
+        return result
     }
 
-    fun polar() {
-
+    fun polar(s: String): String  {
+        var result = ""
+        result = if (s.have('+') ||s.have('-') ||s.have('*') ||s.have('-')) {
+            val abs = abs(s)
+            val angle = angle(s)
+            "$abs" + "e^($angle" + "i)"
+        } else {
+            val sWithoutI = s.removeSuffix("i")
+            if (sWithoutI.isNotEmpty()){
+                sWithoutI + "e^(pi/2)"
+            }else {
+                "1e^(pi/2)"
+            }
+        }
+        return result
     }
 
     fun radian(func: String): Number {
@@ -1181,26 +1206,26 @@ object Taculator {
             val remainder = secondsInt % 60
             seconds = if (seconds.toString().have(dot)) {
                 var afterDot = seconds.toString().split(dot)[1]
-               "$remainder.$afterDot".toDouble()
+                "$remainder.$afterDot".toDouble()
             } else {
                 remainder.toDouble()
             }
             minutes += secondsInt / 60
         }
 
-        if (seconds.toString().have(dot)){
+        if (seconds.toString().have(dot)) {
             val secondsInt = seconds.toInt()
             val remainder = secondsInt % 60
             var afterDot = seconds.toString().split(dot)[1]
-            if (afterDot.toDouble() <= 9){
-                afterDot = (afterDot.toDouble()*10).toString()
+            if (afterDot.toDouble() <= 9) {
+                afterDot = (afterDot.toDouble() * 10).toString()
             }
-          seconds =  if (afterDot.toDouble() >= 60){
+            seconds = if (afterDot.toDouble() >= 60) {
                 val afterDotInt = afterDot.toDouble().toInt()
                 val afterDotRemainder = afterDotInt % 60
                 milliSeconds += afterDotInt / 60
                 "$remainder.$afterDotRemainder".toDouble()
-            }else {
+            } else {
                 seconds
             }
         }
@@ -1217,19 +1242,19 @@ object Taculator {
             seconds += milliSecondsInt / 60
         }
 
-        if (minutes.toString().have(dot)){
+        if (minutes.toString().have(dot)) {
             val minutesInt = minutes.toInt()
             val remainder = minutesInt % 60
             var afterDot = minutes.toString().split(dot)[1]
-            if (afterDot.toDouble() <= 9){
-                afterDot = (afterDot.toDouble()*10).toString()
+            if (afterDot.toDouble() <= 9) {
+                afterDot = (afterDot.toDouble() * 10).toString()
             }
-            minutes =  if (afterDot.toDouble() >= 60){
+            minutes = if (afterDot.toDouble() >= 60) {
                 val afterDotInt = afterDot.toDouble().toInt()
                 val afterDotRemainder = afterDotInt % 60
                 seconds += afterDotInt / 60
                 "$remainder.$afterDotRemainder".toDouble()
-            }else {
+            } else {
                 minutes
             }
         }
@@ -1250,6 +1275,38 @@ object Taculator {
         return result
     }
 
+    fun pr(x: Number, y: Number): Number {
+        val x = x.toDouble()
+        val y: Double = y.toDouble()
+        return kotlin.math.sqrt(x.pow(2.0) + y.pow(2.0));
+    }
+
+    fun p0(x: Number, y: Number): Number {
+        val x = x.toDouble()
+        val y = y.toDouble()
+        val result = Expression("atan($y/$x)")
+        return result.calculate()
+    }
+
+    fun rx(r: Number, O: String): Number {
+        val r = r.toDouble()
+        var O = O
+        if (O.have('°')){
+            O = Math.toRadians(O.removeSuffix("°").toDouble()).toString()
+        }
+        val result =  Expression("$r*cos($O)")
+        return result.calculate()
+    }
+
+    fun ry(r: Number, O: String): Number {
+        val r = r.toDouble()
+        var O = O
+        if (O.have('°')){
+            O = Math.toRadians(O.removeSuffix("°").toDouble()).toString()
+        }
+        val result =  Expression("$r*sin($O)")
+        return result.calculate()
+    }
 
 }
 

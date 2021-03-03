@@ -1,6 +1,3 @@
-import cern.jet.math.Functions
-import org.mariuszgromada.math.mxparser.Expression
-import org.mariuszgromada.math.mxparser.mXparser
 import java.util.function.DoubleFunction
 
 //fun main(args: Array<String>) {
@@ -32,8 +29,8 @@ fun main(args: Array<String>) {
     val one = "15º"
     val two = "15º1'"
     val three = "15.60°58.7'59\""
-    val result = Taculator.dns(
-        three
+    val result = Taculator.rx(
+        5, "60°"
     )
     println(result)
 
