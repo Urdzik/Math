@@ -1137,9 +1137,17 @@ object Taculator {
         return "$n/$d"
     }
 
-    //TODO i don't understand, what doing these functions
     fun rect(s: String): String {
-        val result  =""
+        val r: String
+        val O: String
+        val cosOResult: Double
+        val sinOResult: Double
+        val splitResult = s.split('^')
+        r = splitResult[0].removeSuffix("e")
+        O = splitResult[1].removeSuffix("i")
+        cosOResult = Expression("cos($O)").calculate() * r.toDouble()
+        sinOResult = Expression("sin($O)").calculate() * r.toDouble()
+        val result  = imag("$cosOResult+$sinOResult" + "i")
         return result
     }
 
