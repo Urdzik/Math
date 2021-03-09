@@ -1,51 +1,20 @@
+import org.mariuszgromada.math.mxparser.Expression
 import java.util.regex.Pattern
 
 
 fun main(args: Array<String>) {
 
 
-//    var mainStr = "\\frac{\\frac{1+1}{20+20}}{\\frac{10+10}{200+200}}+\\frac{3+3}{4+4}"
-//    val result = mainStr.findAllStartEndIndexes("\\frac{", "}", 2)
-//
-//    val mutableList = mutableListOf<Pair<String, String>>()
-//    result.reversed().forEach {
-//        mutableList.add(pair( mainStr.getFromTo(it.first, it.second)))
-//    }
-//    mutableList.reversed().forEach {
-//     mainStr =  mainStr.replace(it.first, it.second)
-//    }
+    var mainStr =
+        "\\frac{\\frac{\\frac{1+1}{20+20}}{20+20}}{\\frac{10+10}{200+200}}+\\frac{\\frac{1+1}{20+20}}{4+4} + 1"
+    val result = mainStr.findAllStartEndIndexes("\\frac{", "}", 2)
 
-    val mainStr = "\\frac{\\frac{1+1}{20+20}}{\\frac{10+10}{200+200}}"
-    println(test(mainStr))
+    result.reversed().forEach {
+        mainStr = pair(mainStr.getFromTo(it.first, it.second), mainStr)
+    }
+    println(Expression(test(mainStr).replace(" ", "")).calculate())
 //    frac()
-
 }
-
-//private fun frac() {
-//    val list = mutableListOf<String>()
-//
-//    var result = "\\frac{1+1}{2+2} + \\frac{3+3}{4+4}"
-//
-//
-//
-//    result.split("+", "-", "*").forEach {
-//        var command = it
-//        while (true) {
-//            if (command.contains("\\frac{")) {
-//                command = pair(command)
-//            } else {
-//                break
-//            }
-//        }
-//        if (command != "\\frac") {
-//            list.add(command)
-//        }
-//    }
-//
-//    System.out.println(
-//        "Result = ${list.joinToString("").replace(" ", "")}"
-//    )
-//}
 
 private fun test(str: String): String {
     var str = str
@@ -63,7 +32,7 @@ private fun test(str: String): String {
     return p.joinToString { it }
 }
 
-private fun pair(str: String): Pair<String, String> {
+private fun pair(str: String, mainStr: String): String {
     var first = ""
     var second = ""
     val p = Pattern.compile("(\\\\frac\\{)(.*)\\}(\\{(.*)\\})")
@@ -74,7 +43,7 @@ private fun pair(str: String): Pair<String, String> {
         second = second.removePrefix("{")
         second = second.removeSuffix("}")
     }
-    return Pair("\\frac{$first}{$second}", "($first)/($second)")
+    return mainStr.replace("\\frac{$first}{$second}", "($first)/($second)    ")
 }
 
 private fun String.getFromTo(startIndex: Int, endIndex: Int): String {
@@ -93,7 +62,7 @@ private fun String.findAllStartEndIndexes(start: String, end: String, countOfRep
     return combineListsToPair(firstsIndexValue, endsIndexValue)
 }
 
-private fun combineListsToPair(firstsIndexValue: List<Int>, endsIndexValue: List<Int>): List<Pair<Int, Int>>{
+private fun combineListsToPair(firstsIndexValue: List<Int>, endsIndexValue: List<Int>): List<Pair<Int, Int>> {
     val mutableList = mutableListOf<Pair<Int, Int>>()
     firstsIndexValue.forEachIndexed { index, i ->
         mutableList.add(Pair(i, endsIndexValue[index]))
@@ -112,15 +81,15 @@ private fun String.endsIndexOf(
     var countOfMeet = 0
     var repeat = countOfRepeat
     val i = 0
-    for (element in firstsIndexValue){
-        val indexOfStart = element + start.length -1
-         loop@ for (( index, char) in this.withIndex()){
+    for (element in firstsIndexValue) {
+        val indexOfStart = element + start.length - 1
+        loop@ for ((index, char) in this.withIndex()) {
             if (index > indexOfStart) {
                 if (countOfMeet != -1) {
                     if (countOfMeet <= -2) countOfMeet = 0
                     if (char.toString() == end) {
                         countOfMeet--
-                        if (index == this.length -1){
+                        if (index == this.length - 1) {
                             mutableList.add(index)
                         }
                     } else if (char.toString() == negativeValue) {
@@ -131,7 +100,7 @@ private fun String.endsIndexOf(
                     repeat--
                     countOfMeet--
 
-                    if (repeat == 0){
+                    if (repeat == 0) {
                         mutableList.add(index - 1)
                         repeat = countOfRepeat
                         break@loop
